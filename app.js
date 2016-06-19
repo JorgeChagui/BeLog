@@ -2,14 +2,16 @@
 /**
  * Declaracion de "librerias" que se usaran
  */
-var express = require('express'),
+var server = require('http').createServer(),
+  url = require('url'),
+  WebSocketServer = require('ws').Server,
+  wss = new WebSocketServer({ server: server }),
+  express = require('express'),
   app = express(),
-  config = require('./config/config'),
-  server = require('http').Server(app),
-  glob = require('glob'),
   mongoose = require('mongoose'),
-  io = require('socket.io')(server);
-
+  glob = require('glob'),
+  config = require('./config/config'),
+  port = config.port;
 /**
  * Sincronizamos los modelos de nuestra aplicacion para cargarlos automáticamente
  * @param   config.root +             '/app/models/*.js' Ruta donde se encuentran los modelos de nuestra app
@@ -33,17 +35,19 @@ require('./config/express')(app, config);
 
 app.use(express.static("public"));
 
-server.listen(config.port, function () {
-  console.log('Servidor Express escuchando en puerto : ' + config.port);
-});
+server.on('request', app);
+server.listen(port, function () {
+  console.log('Servidor Express escuchando en puerto : ' + server.address().port);
+}); 
 
-io.on("connection",function(socket){
-  console.log("Alguien se ha conectado con Sockets");
-  socket.on("connection",function(data){
-    console.log(data);
+wss.on('connection', function connection(ws) {
+  var location = url.parse(ws.upgradeReq.url, true);
+  // you might use location.query.access_token to authenticate or share sessions
+  // or ws.upgradeReq.headers.cookie (see http://stackoverflow.com/a/16395220/151312)
+
+  ws.on('message', function incoming(message) {
+    console.log('received: %s', message);
   });
-  socket.on("newcard",function(data){
-    console.log(data);
-    io.sockets.emit("newread",data);
-  });
+
+  ws.send('Hola');
 });
